@@ -1046,8 +1046,6 @@ RUN set -euxo pipefail; \
 COPY ./php/esm-prefix.js /root/esm-prefix.js
 COPY ./php/esm-suffix.js /root/esm-suffix.js
 COPY ./php/esm-php-exit-status.js /root/esm-php-exit-status.js
-RUN apt-get install -y nodejs npm
-COPY ./php/override-php-exit-status.js /root/override-php-exit-status.js
 RUN set -euxo pipefail; \
 	cp -rfv /build/output/* /root/output/; \
 	# Figure out the target file names and URLs
@@ -1113,6 +1111,8 @@ RUN set -euxo pipefail; \
 		# wrapper function.
 		/root/replace.sh $'s/ENVIRONMENT_IS_([A-Z]+)\s*=\s*(true|false)/ENVIRONMENT_IS_$1=RuntimeName==="$1"/g' /root/output/php.js; \
 		/root/replace.sh 's/var ENV\s*=\s*\{/var ENV = PHPLoader.ENV || {/g' /root/output/php.js; \
+	# Override Emscripten's ExitStatus class with one that includes a stack trace
+	/root/insert-after.sh "$( < /root/esm-php-exit-status.js )" 'class ExitStatus{name="ExitStatus";constructor(status){this.message=`Program terminated with exit(${status})`;this.status=status}}' /root/output/php.js; \
 	# Turn the php.js file into an ES module
 		# Manually turn the output into a esm module instead of relying on -s MODULARIZE=1.
 		# which pollutes the global namespace and does not play well with import() mechanics.
@@ -1126,8 +1126,6 @@ RUN set -euxo pipefail; \
 		cat /root/esm-prefix.js >> /root/output/php-module.js && \
 		cat /root/output/php.js >> /root/output/php-module.js && \
 		cat /root/esm-suffix.js >> /root/output/php-module.js && \
-		npm install estree-toolkit meriyah && \
-		node /root/override-php-exit-status.js /root/output/php-module.js && \
 		\
 		# Remove the old php.js file
 		rm /root/output/php.js && \
