@@ -61,12 +61,11 @@ for dir in $(ls $1); do \n\
     cp -r /root/$1/$dir/* /root/lib/$dir/ 2>/dev/null || :; \n\
     done ' > /root/copy-lib.sh
 RUN chmod a+x /root/copy-lib.sh
-# Script to replace strings in files and exit with a non-zero status if the string is not found.
+# Scripts to replace strings in files and exit with a non-zero status if the string is not found.
 COPY ./replace.sh /root/replace.sh
 RUN chmod a+x /root/replace.sh
-# Script to insert strings in files and exit with a non-zero status if the insertion point is not found.
-COPY ./insert-after.sh /root/insert-after.sh
-RUN chmod a+x /root/insert-after.sh
+COPY ./replace-across-lines.sh /root/replace-across-lines.sh
+RUN chmod a+x /root/replace-across-lines.sh
 
 # Patch emcc to allow skipping flags and passing additional flags using environment variables.
 #

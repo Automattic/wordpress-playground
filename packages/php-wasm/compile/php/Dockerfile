@@ -1111,8 +1111,20 @@ RUN set -euxo pipefail; \
 		# wrapper function.
 		/root/replace.sh $'s/ENVIRONMENT_IS_([A-Z]+)\s*=\s*(true|false)/ENVIRONMENT_IS_$1=RuntimeName==="$1"/g' /root/output/php.js; \
 		/root/replace.sh 's/var ENV\s*=\s*\{/var ENV = PHPLoader.ENV || {/g' /root/output/php.js; \
-	# Override Emscripten's ExitStatus class with one that includes a stack trace
-	/root/insert-after.sh "$( < /root/esm-php-exit-status.js )" 'class ExitStatus{name="ExitStatus";constructor(status){this.message=`Program terminated with exit(${status})`;this.status=status}}' /root/output/php.js; \
+	# Patch Emscripten exit status to include a stack trace
+		# Override Emscripten's default ExitStatus class which gets
+		# thrown on failure. Unfortunately, the default object is not
+		# a subclass of Error and does not provide any stack trace.
+		#
+		# This is a deliberate behavior on Emscripten's end to prevent
+		# memory leaks after the program exits. See:
+		#
+		# https://github.com/emscripten-core/emscripten/pull/9108
+		#
+		# In case of WordPress Playground, the worker in which the PHP
+		# runs will typically exit after the PHP program finishes, so
+		# we don't have to worry about memory leaks.
+		/root/replace-across-lines.sh 's/(class\s+ExitStatus\s*\{\s*name\s*=\s*"ExitStatus";\s*constructor\(\s*status\s*\)\s*\{\s*this\.message\s*=\s*`Program terminated with exit\(\$\{status\}\)`;\s*this.status\s*=\s*status;?\s*\}\s*\})/$1\nExitStatus = class PHPExitStatus extends Error {\nconstructor(status) {\n		super(status);\n		this.name = "ExitStatus";\n		this.message = "Program terminated with exit(" + status + ")";\n		this.status = status;\n	}\n};/' /root/output/php.js; \ 
 	# Turn the php.js file into an ES module
 		# Manually turn the output into a esm module instead of relying on -s MODULARIZE=1.
 		# which pollutes the global namespace and does not play well with import() mechanics.
