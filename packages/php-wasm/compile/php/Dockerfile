@@ -1045,7 +1045,6 @@ RUN set -euxo pipefail; \
 # Postprocess the build php.js module:
 COPY ./php/esm-prefix.js /root/esm-prefix.js
 COPY ./php/esm-suffix.js /root/esm-suffix.js
-COPY ./php/esm-php-exit-status.js /root/esm-php-exit-status.js
 RUN set -euxo pipefail; \
 	cp -rfv /build/output/* /root/output/; \
 	# Figure out the target file names and URLs
